@@ -33,5 +33,11 @@ app.use((req, res) => {
   res.status(404).render("404", { url: req.originalUrl }); // You might need to create a 404 view
 });
 
+const createTables = require("./models/init");
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Initialize DB and Start Server
+createTables().then(() => {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+});
