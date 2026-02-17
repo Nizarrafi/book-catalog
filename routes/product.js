@@ -28,7 +28,7 @@ router.get("/", auth, productController.getAll); // This will render 'index'
 router.get("/add", auth, productController.getAddPage);
 router.post("/add", auth, upload.single("image"), productController.create);
 router.get("/edit/:id", auth, productController.getEditPage);
-router.post("/edit/:id", auth, productController.update);
+router.post("/edit/:id", auth, upload.single("image"), productController.update);
 router.post("/delete/:id", auth, productController.delete);
 
 module.exports = router;

@@ -16,7 +16,7 @@
             <h4 class="mb-0">Edit Product</h4>
           </div>
           <div class="card-body">
-            <form action="/product/edit/<%= product.id %>" method="POST">
+            <form action="/product/edit/<%= product.id %>" method="POST" enctype="multipart/form-data">
               <div class="mb-3">
                 <label for="name" class="form-label">Product Name</label>
                 <input type="text" class="form-control" id="name" name="name" value="<%= product.name %>" required>
@@ -25,7 +25,15 @@
                 <label for="price" class="form-label">Price</label>
                 <input type="number" class="form-control" id="price" name="price" value="<%= product.price %>" required>
               </div>
-              <!-- Image update logic skipped for simplicity as per current controller -->
+              <div class="mb-3">
+                <label for="image" class="form-label">Change Image (Optional)</label>
+                <% if (product.image_url) { %>
+                  <div class="mb-2">
+                    <img src="<%= product.image_url %>" alt="Current Image" style="max-height: 150px;" class="img-thumbnail">
+                  </div>
+                <% } %>
+                <input type="file" class="form-control" id="image" name="image">
+              </div>
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-warning">Update Product</button>
                 <a href="/" class="btn btn-secondary">Cancel</a>

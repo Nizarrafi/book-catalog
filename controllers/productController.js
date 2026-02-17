@@ -2,9 +2,8 @@ const Product = require("../models/Product");
 const AWS = require("aws-sdk");
 
 // S3 Configuration
+// S3 Configuration (Use IAM Instance Profile if keys are missing)
 const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region: process.env.AWS_REGION
 });
 
@@ -69,7 +68,30 @@ const productController = {
         try {
             const { id } = req.params;
             const { name, price } = req.body;
-            const image_url = null; // Placeholder
+
+            // Get existing product to retrieve old image if no new one is uploaded
+            const existingProduct = await Product.getById(id);
+            if (!existingProduct) return res.status(404).send("Product not found");
+
+            let image_url = existingProduct.image_url;
+
+            if (req.file) {
+                const params = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: `products/${Date.now()}_${req.file.originalname}`,
+                    Body: req.file.buffer,
+                    ContentType: req.file.mimetype,
+                    ACL: 'public-read'
+                };
+
+                try {
+                    const uploadResult = await s3.upload(params).promise();
+                    image_url = uploadResult.Location;
+                } catch (s3Err) {
+                    console.error("S3 Upload Error:", s3Err);
+                }
+            }
+
             await Product.update(id, name, price, image_url);
             res.redirect("/");
         } catch (err) {
