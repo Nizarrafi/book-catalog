@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: "secret-key",
+  secret: process.env.SESSION_SECRET || "fallback-secret",
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false } // Set into true if using HTTPS
