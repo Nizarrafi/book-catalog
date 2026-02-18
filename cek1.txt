@@ -1,30 +1,38 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Complete 2-Tier Architecture with NAT, RDS, S3, IAM, SSH Enabled
+Description: Arsitektur 3-Tier untuk Sistem Manajemen Buku (Nginx + Node.js + RDS + S3)
 
+# ==============================================================================
+# 1. PARAMETERS: Input yang diminta saat membuat Stack di AWS
+# ==============================================================================
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
+    Description: 'Pilh KeyPair untuk akses SSH ke server EC2'
+    
   DBUsername:
     Type: String
-    Description: 'Username for RDS Database'
+    Description: 'Username untuk login ke database RDS'
     Default: postgres
+    
   DBPassword:
     Type: String
-    Description: 'Password for RDS Database'
+    Description: 'Password database (minimal 8 karakter). Akan ditulis ke file .env app.'
     NoEcho: true
     MinLength: 8
+    
   DBName:
     Type: String
-    Description: 'Custom DB name'
+    Description: 'Nama Database (contoh: mylibrary)'
+    
   BucketName:
     Type: String
-    Description: 'Custom S3 bucket name'
+    Description: 'Nama unik untuk S3 Bucket tempat simpan gambar cover buku'
 
 Resources:
 
-# =================================================
-# VPC
-# =================================================
+# ==============================================================================
+# 2. NETWORKING: Membangun "Kompleks Perumahan" Digital (VPC & Subnets)
+# ==============================================================================
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -33,7 +41,7 @@ Resources:
       EnableDnsHostnames: true
 
   InternetGateway:
-    Type: AWS::EC2::InternetGateway
+    Type: AWS::EC2::InternetGateway # Gerbang menuju Internet bagi Public Subnet
 
   AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -41,9 +49,7 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-# =================================================
-# SUBNETS (2 AZ)
-# =================================================
+  # SUBNET PUBLIK: Untuk server Nginx (bisa diakses langsung dari internet)
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -60,6 +66,7 @@ Resources:
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
 
+  # SUBNET PRIVATE: Untuk App Server & RDS (Tersembunyi, lebih aman)
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -74,9 +81,9 @@ Resources:
       AvailabilityZone: ap-southeast-3b
       CidrBlock: 10.0.4.0/24
 
-# =================================================
-# ROUTING
-# =================================================
+# ==============================================================================
+# 3. ROUTING & NAT: Mengatur Arah "Lalu Lintas" Data
+# ==============================================================================
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -102,9 +109,10 @@ Resources:
       SubnetId: !Ref PublicSubnetB
       RouteTableId: !Ref PublicRouteTable
 
-# NAT
+  # NAT GATEWAY: Agar server di private subnet bisa internetan (untuk npm install), 
+  # tapi orang luar tetap TIDAK BISA masuk.
   EIP:
-    Type: AWS::EC2::EIP
+    Type: AWS::EC2::EIP # IP Statis untuk NAT Gateway
     DependsOn: AttachIGW
     Properties:
       Domain: vpc
@@ -139,13 +147,14 @@ Resources:
       SubnetId: !Ref PrivateSubnetB
       RouteTableId: !Ref PrivateRouteTable
 
-# =================================================
-# SECURITY GROUPS
-# =================================================
+# ==============================================================================
+# 4. SECURITY GROUPS (SG): "Satpam/Firewall" untuk Setiap Lapisan
+# ==============================================================================
+  # SG NGINX: Izinkan semua orang buka website lewat port 80 (HTTP)
   NginxSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow HTTP and SSH
+      GroupDescription: Izinkan HTTP (80) dan SSH (22) dari manapun
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -160,16 +169,17 @@ Resources:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 
+  # SG APP: Izinkan koneksi port 3000 HANYA jika datang dari NginxServer
   AppSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow only from Nginx
+      GroupDescription: Hanya izinkan trafik port 3000 dari Nginx
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 3000
           ToPort: 3000
-          SourceSecurityGroupId: !Ref NginxSG
+          SourceSecurityGroupId: !Ref NginxSG # Inilah "Jembatan" Keamanannya
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -178,36 +188,48 @@ Resources:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 
+  # SG RDS: Izinkan Database hanya bisa dibuka oleh AppServer di port 5432
   RDSSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow Postgres from App
+      GroupDescription: Izinkan database Postgres diakses oleh App Server
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref AppSG
+          SourceSecurityGroupId: !Ref AppSG # Hanya server aplikasi yang bisa akses data
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 
-# =================================================
-# S3 + IAM
-# =================================================
-# =================================================
-# S3 BUCKET: Tempat Menyimpan Gambar Cover Buku
-# =================================================
+# ==============================================================================
+# 5. S3 & IAM: Penyimpanan Gambar & Izin Akses "Tanpa Password manual"
+# ==============================================================================
+  # S3 BUCKET: Tempat simpan file gambar (cover buku). Dipisah dari server agar ringan.
   AppBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketName # Gunakan nama dari parameter
+      BucketName: !Ref BucketName
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
-        BlockPublicPolicy: true
+        BlockPublicPolicy: false # Izinkan polisi publik agar gambar bisa dilihat di browser
         IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        RestrictPublicBuckets: false
 
+  AppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AppBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject" # Agar link gambar S3 bisa dibuka oleh browser pengunjung
+            Resource: !Join ["", ["arn:aws:s3:::", !Ref AppBucket, "/*"]]
+
+  # IAM ROLE: "Kartu ID" bagi EC2. App Server bisa upload ke S3 karena punya role ini.
   AppRole:
     Type: AWS::IAM::Role
     Properties:
@@ -226,9 +248,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                Resource: !Sub "${AppBucket.Arn}/*"
+                  - s3:PutObject # Izin upload (digunakan controller.js saat tambah buku)
+                  - s3:DeleteObject # Izin hapus (digunakan controller.js saat hapus buku)
+                Resource: !Sub "arn:aws:s3:::${BucketName}/*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
   AppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -236,13 +260,13 @@ Resources:
       Roles:
         - !Ref AppRole
 
-# =================================================
-# RDS
-# =================================================
+# ==============================================================================
+# 6. DATABASE RDS: PostgreSQL yang dikelola penuh oleh AWS
+# ==============================================================================
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: Multi AZ subnet
+      DBSubnetGroupDescription: Kelompok subnet di private zone untuk database
       SubnetIds:
         - !Ref PrivateSubnetA
         - !Ref PrivateSubnetB
@@ -256,14 +280,14 @@ Resources:
       MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
       DBName: !Ref DBName
-      PubliclyAccessible: false
+      PubliclyAccessible: false # SANGAT AMAN: Tidak bisa diakses dari luar VPC
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
         - !Ref RDSSG
 
-# =================================================
-# EC2 PRIVATE APP
-# =================================================
+# ==============================================================================
+# 7. COMPUTE LAPISAN 2: Server Aplikasi (Node.js) di Private Subnet
+# ==============================================================================
   AppServer:
     Type: AWS::EC2::Instance
     Properties:
@@ -271,27 +295,28 @@ Resources:
       ImageId: ami-0d5f3e23c61fbb3e8
       KeyName: !Ref KeyName
       IamInstanceProfile: !Ref AppInstanceProfile
-      SubnetId: !Ref PrivateSubnetA
+      SubnetId: !Ref PrivateSubnetA # Tersembunyi di dalam private subnet
       SecurityGroupIds:
         - !Ref AppSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          # --- Script Instalasi Otomatis Saat EC2 Menyala ---
+          # --- Script Instalasi Otomatis (Saat Server Pertama Kali Nyala) ---
           
           dnf update -y
-          dnf install -y nodejs git # Install Node.js dan Git
-          npm install -g pm2 # Install PM2 untuk menjalankan aplikasi di Background
+          dnf install -y nodejs git 
+          npm install -g pm2 # PM2 menjaga aplikasi Anda tetap hidup 24 jam
           
           cd /home/ec2-user
-          # Mengambil kode terbaru dari GitHub kamu
+          # Mengambil kode program Manajemen Buku dari GitHub Kamu
           git clone https://github.com/Nizarrafi/book-catalog.git app
           cd app
-          npm install # Install semua library (Express, pg, aws-sdk, dll)
+          npm install # Install semua library (Express, pg, aws-sdk, bcrypt)
           
-          # Membuat file .env secara otomatis berdasarkan resource yang dibuat CloudFormation
+          # --- JEMBATAN KE APP: Membuat file .env secara otomatis ---
+          # Baris ini menghubungkan arsitektur YAML dengan kodingan Javascript kamu.
           cat <<EOF > .env
-          DB_HOST=${DBInstance.Endpoint.Address} # Alamat RDS yang baru dibuat
+          DB_HOST=${DBInstance.Endpoint.Address} 
           DB_USER=${DBUsername}
           DB_PASS=${DBPassword} 
           DB_NAME=${DBName}
@@ -299,22 +324,21 @@ Resources:
           AWS_REGION=${AWS::Region}
           EOF
           
-          # Berikan izin akses folder ke user ec2-user
           chown -R ec2-user:ec2-user /home/ec2-user/app
-          # Jalankan aplikasi menggunakan PM2 (agar tetap hidup meski terminal ditutup)
+          # Jalankan server.js menggunakan PM2
           sudo -u ec2-user pm2 start server.js --name app
           sudo -u ec2-user pm2 save
 
-# =================================================
-# EC2 PUBLIC NGINX
-# =================================================
+# ==============================================================================
+# 8. COMPUTE LAPISAN 1: Nginx (Gateway Publik) di Public Subnet
+# ==============================================================================
   NginxServer:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       ImageId: ami-0d5f3e23c61fbb3e8
       KeyName: !Ref KeyName
-      SubnetId: !Ref PublicSubnetA
+      SubnetId: !Ref PublicSubnetA # Berada di halaman depan (Public)
       SecurityGroupIds:
         - !Ref NginxSG
       UserData:
@@ -322,7 +346,10 @@ Resources:
           #!/bin/bash
           dnf update -y
           dnf install -y nginx
-
+          
+          # KONFIGURASI REVERSE PROXY:
+          # Nginx menerima request di port 80, lalu melemparkannya ke 
+          # App Server (Node.js) di port 3000 via IP Internal.
           cat <<EOF > /etc/nginx/conf.d/app.conf
           server {
               listen 80;
@@ -338,8 +365,14 @@ Resources:
           systemctl enable nginx
           systemctl restart nginx
 
+# ==============================================================================
+# 9. OUTPUTS: Hasil akhir yang ditampilkan di AWS Console
+# ==============================================================================
 Outputs:
   PublicURL:
+    Description: 'Gunakan URL ini untuk membuka Sistem Manajemen Buku Kamu'
     Value: !Sub "http://${NginxServer.PublicIp}"
+    
   S3BucketName:
+    Description: 'Nama Bucket S3 tempat gambar disimpan'
     Value: !Ref AppBucket
