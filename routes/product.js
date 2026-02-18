@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const productController = require("../controllers/productController");
+const bookController = require("../controllers/bookController");
 const auth = require("../middleware/auth");
 const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() }); // Temporary memory storage
@@ -24,11 +24,11 @@ const upload = multer({ storage: multer.memoryStorage() }); // Temporary memory 
 // DECISION: We will use this router for the defined endpoints in the controller.
 // Since the controller renders views, we use GET for views and POST for actions.
 
-router.get("/", auth, productController.getAll); // This will render 'index'
-router.get("/add", auth, productController.getAddPage);
-router.post("/add", auth, upload.single("image"), productController.create);
-router.get("/edit/:id", auth, productController.getEditPage);
-router.post("/edit/:id", auth, upload.single("image"), productController.update);
-router.post("/delete/:id", auth, productController.delete);
+router.get("/", bookController.getAll);
+router.get("/add", auth, bookController.getAddPage);
+router.post("/add", auth, upload.single("image"), bookController.create);
+router.get("/edit/:id", auth, bookController.getEditPage);
+router.post("/edit/:id", auth, upload.single("image"), bookController.update);
+router.post("/delete/:id", auth, bookController.delete);
 
 module.exports = router;

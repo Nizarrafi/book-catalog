@@ -11,11 +11,12 @@ const createTables = async () => {
     );
   `;
 
-  const productTable = `
-    CREATE TABLE IF NOT EXISTS products (
+  const bookTable = `
+    CREATE TABLE IF NOT EXISTS books (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      price DECIMAL(10, 2) NOT NULL,
+      title VARCHAR(200) NOT NULL,
+      author VARCHAR(100) NOT NULL,
+      year INTEGER,
       image_url TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -23,9 +24,9 @@ const createTables = async () => {
 
   try {
     await pool.query(userTable);
-    console.log("Users table created or already exists.");
-    await pool.query(productTable);
-    console.log("Products table created or already exists.");
+    console.log("Users table created.");
+    await pool.query(bookTable);
+    console.log("Books table created.");
   } catch (err) {
     console.error("Error creating tables:", err);
   }

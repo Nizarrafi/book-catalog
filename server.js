@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const cookieParser = require("cookie-parser");
+const session = require("express-session");
 require("dotenv").config();
 
 const app = express();
@@ -9,18 +9,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(session({
+  secret: "secret-key",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set into true if using HTTPS
+}));
 app.use(express.static("public"));
 
 app.set("view engine", "ejs");
 
 // Routes
 app.use("/auth", require("./routes/auth"));
-app.use("/product", require("./routes/product"));
+app.use("/books", require("./routes/product")); // Using the same file but mounted at /books
 
-// Home Route (Redirect to Product List)
+// Home Route (Redirect to Book List)
 app.get("/", (req, res) => {
-  res.redirect("/product");
+  res.redirect("/books");
 });
 
 // Health Check

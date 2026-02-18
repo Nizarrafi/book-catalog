@@ -1,5 +1,4 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 const authController = {
@@ -34,13 +33,8 @@ const authController = {
             const isMatch = await bcrypt.compare(password, user.password);
             if (!isMatch) return res.render("login", { error: "Wrong password" });
 
-            const token = jwt.sign(
-                { id: user.id, email: user.email },
-                process.env.JWT_SECRET,
-                { expiresIn: "1d" }
-            );
-
-            res.cookie("token", token, { httpOnly: true });
+            req.session.userId = user.id;
+            req.session.userName = user.name;
             res.redirect("/");
         } catch (err) {
             console.error(err);
@@ -49,7 +43,7 @@ const authController = {
     },
 
     logout: (req, res) => {
-        res.clearCookie("token");
+        req.session.destroy();
         res.redirect("/auth/login");
     },
 };

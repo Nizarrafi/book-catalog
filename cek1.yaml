@@ -9,11 +9,6 @@ Parameters:
     Description: 'Password for RDS Database'
     NoEcho: true
     MinLength: 8
-  JWTsecret:
-    Type: String
-    Description: 'Input your JWT Secret here'
-    NoEcho: true
-    MinLength: 8
 
 Resources:
 
@@ -309,7 +304,7 @@ Resources:
           DB_NAME=miniecommerce
           AWS_BUCKET_NAME=${AppBucket}
           AWS_REGION=${AWS::Region}
-          JWT_SECRET=${JWTsecret}
+          SESSION_SECRET=super-secret-key-123
           EOF
 
           chown -R ec2-user:ec2-user /home/ec2-user/app

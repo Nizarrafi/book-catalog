@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambah Buku Baru</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card bg-white">
+        <h2 class="text-center mb-4">📖 Tambah Buku</h2>
+        <form action="/books/add" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Judul Buku</label>
+                <input type="text" name="title" class="form-control" placeholder="Masukkan judul" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Penulis</label>
+                <input type="text" name="author" class="form-control" placeholder="Nama penulis" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tahun Terbit</label>
+                <input type="number" name="year" class="form-control" placeholder="Tahun" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Cover Buku (Gambar)</label>
+                <input type="file" name="image" class="form-control" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Simpan Buku</button>
+            <a href="/" class="btn btn-link w-100 mt-2">Kembali</a>
+        </form>
+    </div>
+</body>
+
+</html>

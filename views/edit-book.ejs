@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Buku</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-img {
+            width: 100px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card bg-white">
+        <h2 class="text-center mb-4">✏️ Edit Buku</h2>
+        <form action="/books/edit/<%= book.id %>" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Judul Buku</label>
+                <input type="text" name="title" class="form-control" value="<%= book.title %>" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Penulis</label>
+                <input type="text" name="author" class="form-control" value="<%= book.author %>" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tahun Terbit</label>
+                <input type="number" name="year" class="form-control" value="<%= book.year %>" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Cover Saat Ini</label><br>
+                <% if (book.image_url) { %>
+                    <img src="<%= book.image_url %>" class="preview-img">
+                    <% } else { %>
+                        <p class="text-muted">Tidak ada gambar</p>
+                        <% } %>
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                            <small class="text-muted">Biarkan kosong jika tidak ingin mengganti gambar.</small>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Update Buku</button>
+            <a href="/" class="btn btn-link w-100 mt-2">Batal</a>
+        </form>
+    </div>
+</body>
+
+</html>
