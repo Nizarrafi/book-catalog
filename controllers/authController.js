@@ -64,8 +64,8 @@ const authController = {
     logout: (req, res) => {
         // Hapus (hancurkan) data session dari memori server
         req.session.destroy();
-        // Kembalikan user ke halaman login
-        res.redirect("/auth/login");
+        // Kembalikan user ke halaman utama (Daftar Buku)
+        res.redirect("/");
     },
 };
 
