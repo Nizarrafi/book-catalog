@@ -293,7 +293,7 @@ Resources:
           npm install -g pm2
 
           cd /home/ec2-user
-          git clone https://github.com/Nizarrafi/mini-ecommerce.git app
+          git clone https://github.com/Nizarrafi/book-catalog.git app
           cd app
           npm install
 
