@@ -46,27 +46,31 @@
     </div>
 
     <div class="container my-5">
+        <!-- Mulai perulangan untuk menampilkan setiap buku dari database -->
         <div class="row row-cols-1 row-cols-md-3 g-4">
             <% books.forEach(book=> { %>
                 <div class="col">
                     <div class="card h-100 shadow-sm border-0">
+                        <!-- Jika buku ada link gambarnya, tampilkan gambar dari S3 -->
                         <% if (book.image_url) { %>
                             <img src="<%= book.image_url %>" class="card-img-top" alt="<%= book.title %>"
                                 style="height: 200px; object-fit: cover;">
                             <% } else { %>
+                                <!-- Jika tidak ada gambar, tampilkan kotak abu-abu -->
                                 <div class="bg-secondary text-white text-center py-5">No Image</div>
                                 <% } %>
                                     <div class="card-body">
                                         <h5 class="card-title text-primary">
                                             <%= book.title %>
                                         </h5>
-                                        <p class="card-text text-muted">Penulis: <%= book.author %>
-                                        </p>
-                                        <p class="card-text"><small class="text-secondary">Tahun Terbit: <%= book.year
-                                                    %></small>
+                                        <p class="card-text text-muted">Ditulis oleh: <strong>
+                                                <%= book.author %>
+                                            </strong></p>
+                                        <p class="card-text small">Tahun: <%= book.year %>
                                         </p>
                                     </div>
                                     <div class="card-footer bg-white border-0 text-center pb-3">
+                                        <!-- Tombol Edit & Hapus hanya muncul jika user sudah login -->
                                         <% if (user) { %>
                                             <div class="d-grid gap-2">
                                                 <a href="/books/edit/<%= book.id %>"
@@ -81,7 +85,7 @@
                                     </div>
                     </div>
                 </div>
-                <% }); %>
+                <% }) %>
         </div>
     </div>
 </body>

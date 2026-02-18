@@ -196,6 +196,9 @@ Resources:
 # =================================================
 # S3 + IAM
 # =================================================
+# =================================================
+# S3 BUCKET: Tempat Menyimpan Gambar Cover Buku
+# =================================================
   AppBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -214,9 +217,12 @@ Resources:
         Statement:
           - Effect: Allow
             Principal: "*"
-            Action: "s3:GetObject"
+            Action: "s3:GetObject" # Memberikan akses publik agar gambar bisa dilihat di browser
             Resource: !Join ["", ["arn:aws:s3:::", !Ref AppBucket, "/*"]]
 
+# =================================================
+# IAM ROLE: Autorisasi EC2 agar bisa akses S3 & RDS
+# =================================================
   AppRole:
     Type: AWS::IAM::Role
     Properties:
@@ -225,7 +231,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ec2.amazonaws.com
+              Service: ec2.amazonaws.com # Role ini digunakan oleh server EC2
             Action: sts:AssumeRole
       Policies:
         - PolicyName: S3AccessPolicy
@@ -235,8 +241,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
+                  - s3:PutObject # Izin untuk upload gambar
+                  - s3:DeleteObject # Izin untuk hapus gambar
                 Resource: !Sub "${AppBucket.Arn}/*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
@@ -248,7 +254,7 @@ Resources:
         - !Ref AppRole
 
 # =================================================
-# RDS
+# RDS: Database PostgreSQL Terpusat (Bukan di Local)
 # =================================================
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -288,25 +294,31 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          # --- Script Instalasi Otomatis Saat EC2 Menyala ---
+          
           dnf update -y
-          dnf install -y nodejs git
-          npm install -g pm2
-
+          dnf install -y nodejs git # Install Node.js dan Git
+          npm install -g pm2 # Install PM2 untuk menjalankan aplikasi di Background
+          
           cd /home/ec2-user
+          # Mengambil kode terbaru dari GitHub kamu
           git clone https://github.com/Nizarrafi/book-catalog.git app
           cd app
-          npm install
-
+          npm install # Install semua library (Express, pg, aws-sdk, dll)
+          
+          # Membuat file .env secara otomatis berdasarkan resource yang dibuat CloudFormation
           cat <<EOF > .env
-          DB_HOST=${DBInstance.Endpoint.Address}
+          DB_HOST=${DBInstance.Endpoint.Address} # Alamat RDS yang baru dibuat
           DB_USER=postgres
-          DB_PASS=${DBPassword}
+          DB_PASS=${DBPassword} # Password yang kamu ketik saat buat Stack
           DB_NAME=miniecommerce
-          AWS_BUCKET_NAME=${AppBucket}
+          AWS_BUCKET_NAME=${AppBucket} # Nama S3 Bucket yang baru dibuat
           AWS_REGION=${AWS::Region}
           EOF
-
+          
+          # Berikan izin akses folder ke user ec2-user
           chown -R ec2-user:ec2-user /home/ec2-user/app
+          # Jalankan aplikasi menggunakan PM2 (agar tetap hidup meski terminal ditutup)
           sudo -u ec2-user pm2 start server.js --name app
           sudo -u ec2-user pm2 save
 
