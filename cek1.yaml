@@ -304,7 +304,6 @@ Resources:
           DB_NAME=miniecommerce
           AWS_BUCKET_NAME=${AppBucket}
           AWS_REGION=${AWS::Region}
-          SESSION_SECRET=super-secret-key-123
           EOF
 
           chown -R ec2-user:ec2-user /home/ec2-user/app
