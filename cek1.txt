@@ -4,11 +4,21 @@ Description: Complete 2-Tier Architecture with NAT, RDS, S3, IAM, SSH Enabled
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
+  DBUsername:
+    Type: String
+    Description: 'Username for RDS Database'
+    Default: postgres
   DBPassword:
     Type: String
     Description: 'Password for RDS Database'
     NoEcho: true
     MinLength: 8
+  DBName:
+    Type: String
+    Description: 'Custom DB name'
+  BucketName:
+    Type: String
+    Description: 'Custom S3 bucket name'
 
 Resources:
 
@@ -185,8 +195,18 @@ Resources:
 # =================================================
 # S3 + IAM
 # =================================================
+# =================================================
+# S3 BUCKET: Tempat Menyimpan Gambar Cover Buku
+# =================================================
   AppBucket:
     Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName # Gunakan nama dari parameter
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   AppRole:
     Type: AWS::IAM::Role
@@ -233,9 +253,9 @@ Resources:
       Engine: postgres
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 20
-      MasterUsername: postgres
+      MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
-      DBName: miniecommerce
+      DBName: !Ref DBName
       PubliclyAccessible: false
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
@@ -257,25 +277,31 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          # --- Script Instalasi Otomatis Saat EC2 Menyala ---
+          
           dnf update -y
-          dnf install -y nodejs git
-          npm install -g pm2
-
+          dnf install -y nodejs git # Install Node.js dan Git
+          npm install -g pm2 # Install PM2 untuk menjalankan aplikasi di Background
+          
           cd /home/ec2-user
+          # Mengambil kode terbaru dari GitHub kamu
           git clone https://github.com/Nizarrafi/book-catalog.git app
           cd app
-          npm install
-
+          npm install # Install semua library (Express, pg, aws-sdk, dll)
+          
+          # Membuat file .env secara otomatis berdasarkan resource yang dibuat CloudFormation
           cat <<EOF > .env
-          DB_HOST=${DBInstance.Endpoint.Address}
-          DB_USER=postgres
-          DB_PASS=${DBPassword}
-          DB_NAME=miniecommerce
-          AWS_BUCKET=${AppBucket}
+          DB_HOST=${DBInstance.Endpoint.Address} # Alamat RDS yang baru dibuat
+          DB_USER=${DBUsername}
+          DB_PASS=${DBPassword} 
+          DB_NAME=${DBName}
+          AWS_BUCKET_NAME=${BucketName}
           AWS_REGION=${AWS::Region}
           EOF
-
+          
+          # Berikan izin akses folder ke user ec2-user
           chown -R ec2-user:ec2-user /home/ec2-user/app
+          # Jalankan aplikasi menggunakan PM2 (agar tetap hidup meski terminal ditutup)
           sudo -u ec2-user pm2 start server.js --name app
           sudo -u ec2-user pm2 save
 

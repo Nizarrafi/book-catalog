@@ -4,11 +4,21 @@ Description: Complete 2-Tier Architecture with NAT, RDS, S3, IAM, SSH Enabled
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
+  DBUsername:
+    Type: String
+    Description: 'Username for RDS Database'
+    Default: postgres
   DBPassword:
     Type: String
     Description: 'Password for RDS Database'
     NoEcho: true
     MinLength: 8
+  DBName:
+    Type: String
+    Description: 'Custom DB name'
+  BucketName:
+    Type: String
+    Description: 'Custom S3 bucket name'
 
 Resources:
 
@@ -202,6 +212,7 @@ Resources:
   AppBucket:
     Type: AWS::S3::Bucket
     Properties:
+      BucketName: !Ref BucketName # Gunakan nama dari parameter yang diinput user
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -272,7 +283,7 @@ Resources:
       AllocatedStorage: 20
       MasterUsername: postgres
       MasterUserPassword: !Ref DBPassword
-      DBName: miniecommerce
+      DBName: !Ref DBName
       PubliclyAccessible: false
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
@@ -309,10 +320,10 @@ Resources:
           # Membuat file .env secara otomatis berdasarkan resource yang dibuat CloudFormation
           cat <<EOF > .env
           DB_HOST=${DBInstance.Endpoint.Address} # Alamat RDS yang baru dibuat
-          DB_USER=postgres
-          DB_PASS=${DBPassword} # Password yang kamu ketik saat buat Stack
-          DB_NAME=miniecommerce
-          AWS_BUCKET_NAME=${AppBucket} # Nama S3 Bucket yang baru dibuat
+          DB_USER=${DBUsername}
+          DB_PASS=${DBPassword} 
+          DB_NAME=${DBName}
+          AWS_BUCKET_NAME=${BucketName}
           AWS_REGION=${AWS::Region}
           EOF
           
