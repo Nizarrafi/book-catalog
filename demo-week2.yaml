@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Complete 2-Tier Architecture with NAT, RDS, S3, IAM, SSH Enabled
+Description: Demo week2
 
 Parameters:
   KeyName:
@@ -49,14 +49,6 @@ Resources:
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
 
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: ap-southeast-3b
-      CidrBlock: 10.0.2.0/24
-      MapPublicIpOnLaunch: true
-
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -91,12 +83,6 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnetA
-      RouteTableId: !Ref PublicRouteTable
-
-  PublicSubnetBAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnetB
       RouteTableId: !Ref PublicRouteTable
 
 # NAT
@@ -277,11 +263,12 @@ Resources:
       Engine: postgres
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 20
-      MasterUsername: postgres
+      MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
       DBName: !Ref DBName
       PubliclyAccessible: false
       DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: true # kalau mau true untuk HA
       VPCSecurityGroups:
         - !Ref RDSSG
 
@@ -313,11 +300,11 @@ Resources:
           cd app
           npm install # Install semua library (Express, pg, aws-sdk, dll)
           
-          # Membuat file .env secara otomatis berdasarkan resource yang dibuat CloudFormation
+          # Membuat file .env secara otomatis
           cat <<EOF > .env
-          DB_HOST=${DBInstance.Endpoint.Address} # Alamat RDS yang baru dibuat
+          DB_HOST=${DBInstance.Endpoint.Address}
           DB_USER=${DBUsername}
-          DB_PASS=${DBPassword} 
+          DB_PASS=${DBPassword}
           DB_NAME=${DBName}
           AWS_BUCKET_NAME=${AppBucket}
           AWS_REGION=${AWS::Region}

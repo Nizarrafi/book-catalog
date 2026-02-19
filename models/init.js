@@ -1,14 +1,4 @@
-const { Pool } = require("pg"); // Import driver PostgreSQL untuk Node.js
-
-// Konfigurasi koneksi ke Database RDS (diambil dari file .env)
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  port: 5432, // Port standar PostgreSQL
-  ssl: { rejectUnauthorized: false } // Diperlukan agar bisa terkoneksi aman ke AWS RDS
-});
+const pool = require("../config/db"); // Gunakan pool koneksi terpusat dari config/db.js
 
 // Fungsi untuk membuat tabel secara otomatis jika belum ada (Auto-Migration)
 const createTables = async () => {

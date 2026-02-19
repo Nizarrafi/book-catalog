@@ -1,14 +1,4 @@
-const { Pool } = require("pg"); // Driver database
-
-// Hubungkan ke RDS menggunakan variabel lingkungan (.env)
-const pool = new Pool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    port: 5432,
-    ssl: { rejectUnauthorized: false }
-});
+const pool = require("../config/db"); // Gunakan pool koneksi terpusat dari config/db.js
 
 const Book = {
     // Fungsi mengambil semua data buku, urutkan dari yang terbaru ditambahkan
